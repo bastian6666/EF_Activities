@@ -107,6 +107,8 @@ The first argument to these functions is the same regardless of the distribution
 
 All of this will make more sense once we consider a concrete example. Let's take a look at the normal probability density function first, since it's the one you're most familiar with. If you use ?dnorm you'll see that for many of the function arguments there are default values, specifically mean=0 and sd=1. Therefore if these values are not specified explicitly in the function call R assumes you want a standard Normal distribution.
 
+Note: by = 1, type = 's'
+
 ```{r}
 x = seq(-5,5,by=0.1)
 plot(x,dnorm(x),type='l')  		## that’s a lowercase “L” for “line”
