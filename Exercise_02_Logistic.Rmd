@@ -37,35 +37,35 @@ plot(time,n,ylim=c(0,12),lwd=3,type='l',
 
 1.  Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
 
-```{r}
+```{r Problem_1}
 r = c(1.95, 2.05, 2.5, 2.8)
 
+# Set up a 2x2 grid of plots
+par(mfrow = c(2, 2))
+
 for (i in r){
-  
-  n = rep(n0,NT)    ## vector to store results
-  
+  n = rep(n0,NT)    
   for(t in 2:NT){
     n[t] = n[t-1] + i*n[t-1]*(1-n[t-1]/K)
   }
-  
   plot(time,n,ylim=c(0,12),lwd=3,type='l',
      bty='l',cex.lab=1.5,
      xlab="Time",ylab="Population Size")
-  
 }
+
 ```
 
 ### Answers
 
 1.  Describe the trajectory observed in each case.
 
-For r = 1.95:
+For r = 1.95: With this variation of the intrinsic growth rate the population size increases to the maximum value and then fluctate around the carrying capacity value across the time, slowly converging to it (not reached in the time frame of the simulation).
 
-For r = 2.05:
+For r = 2.05: In ths case we observe a similar behavior but with higher fluctations around the carrying capacity value, and a slower convergence to it.
 
-For r = 2.5:
+For r = 2.5: In this case the population size increases and then fluctate slow from time 5 to 10, then the fluctation increase drastically for the rest of the time frame.
 
-For r = 2.8:
+For r = 2.8: For this plot we observe the normal increase in the population size, but then the fluctations drastically increases without any visible pattern or tendency to converge to the carrying capacity value.
 
 ## Probability distributions in R
 
@@ -173,6 +173,58 @@ This example demonstrates that as the number of random draws from a probability 
 
 2.  Choose another probability distribution from the table above and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
 
+```{r Problem_2}
+
+# Probability density function, for Gamma distribution.
+x = seq(0,10,by=0.1)
+plot(x,dgamma(x,1,1),type='l')  		
+abline(v=0)				          
+lines(x,dgamma(x,2,1),col=2)			
+abline(v=2,col=2)
+lines(x,dgamma(x,1,2),col=3)
+abline(v=1,col=3)
+```
+
+```{r}
+# Cumulative distribution function, for Gamma distribution.
+plot(x,pgamma(x,1,1),type='l')
+abline(v=0)
+lines(x,pgamma(x,2,1),col=2)
+abline(v=2,col=2)
+lines(x,pgamma(x,1,2),col=3)
+abline(v=1,col=3)
+```
+
+```{r}
+# Quantile function, for Gamma distribution.
+p = seq(0,1,by=0.01)
+plot(p,qgamma(p,1,1),type='l',ylim=range(x))    # ylim sets the y-axis range
+# range returns the min/max as a 2-element vector
+abline(h=0)						# “h” for “horizontal”
+lines(p,qgamma(p,2,1),col=2)
+abline(h=2,col=2)
+lines(p,qgamma(p,1,2),col=3)
+abline(h=1,col=3)
+```
+
+```{r}
+qgamma(c(0.025,0.975),1,1)		   
+plot(p,qgamma(p,1,1),type='l',ylim=range(x))
+abline(v=c(0.025,0.975),lty=2)	
+abline(h=qgamma(c(0.025,0.975),1,1),lty=2)	
+plot(x,dgamma(x,1,1),type='l')		
+abline(v=qgamma(c(0.025,0.975),1,1),lty=2)
+```
+
+```{r}
+# Random function, for Gamma distribution.
+n = c(10,100,1000,10000)	
+for(i in 1:4){			
+  hist(rgamma(n[i],1,1),main=n[i],probability=TRUE,breaks=40)  
+  lines(x,dgamma(x,1,1),col=2)
+}
+```
+
 ## Monte Carlo Simulation
 
 Most of the figures from the logistic growth example in Chapter 2 included plots of the median trajectory and 95% interval estimates. These summary statistics are a reflection of the fact that the underlying model prediction was a timeseries of probability distributions, rather than a single trajectory. So how do we project a probability distribution through time?
@@ -203,6 +255,30 @@ It turns out that this specific transformation (x\^2 of a standard Normal), has 
 ### Problems
 
 3.  Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+
+```{r}
+
+x = rlnorm(10000,0,0.5)
+y = sin(x)
+
+hist(x,main="Original distribution",breaks=40)
+abline(v=quantile(x,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="orange")
+abline(v=mean(x),col="red",lwd=3,lty=3)
+
+hist(y,main="Transformed distribution",breaks=40)
+abline(v=quantile(y,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="orange")
+abline(v=mean(y),col="red",lwd=3,lty=3)
+  
+  ```
+  
+  ```{r}
+  mean(x)
+  median(x)
+  quantile(x,c(0.025,0.975))
+  mean(y)
+  median(y)
+  quantile(y,c(0.025,0.975))
+  ```
 
 ## Parameter error
 
@@ -251,11 +327,42 @@ ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
 
 4.  Plot histograms of the samples of r and K used for the simulation.
 
+```{r} 
+
+hist(rE,main="r",breaks=40)
+hist(KE,main="K",breaks=40)
+
+```
+
 5.  Plot a sample of 10 different trajectories (through time) from your ensemble (on one graph).
+  
+```{r}
+plot(time,n[1,],type='l',ylim=c(0,12),lwd=3,
+     bty='l',cex.lab=1.5,
+     xlab="Time",ylab="Population Size")
+for(i in 2:10){
+  lines(time,n[i,],lwd=3)
+}
+
+```
 
 6.  Plot a histogram of your population forecast at time = 15.
 
+```{r}
+
+hist(n[,15],main="Population at time = 15",breaks=40)
+
+```
+
+
 7.  Plot the median trajectory through time. Use `ciEnvelope` to add a 95% CI (i.e. 2.5% to 97.5%) to the plot. This function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
+
+```{r}
+plot(time,n.stats[2,],type='l',ylim=c(0,12),lwd=3,
+     bty='l',cex.lab=1.5,
+     xlab="Time",ylab="Population Size")
+ciEnvelope(time,n.stats[1,],n.stats[3,])
+```
 
 ## Extra Credit: Initial conditions
 
@@ -277,4 +384,34 @@ for(i in 1:NE){
 
 8.  Plot the median & 95% interval.
 
+```{r}
+n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
+plot(time,n.stats[2,],type='l',ylim=c(0,12),lwd=3,
+     bty='l',cex.lab=1.5,
+     xlab="Time",ylab="Population Size")
+ciEnvelope(time,n.stats[2,],n.stats[3,])
+```
+
 9.  Repeat with r equal to 1.95, 2.05, and 2.8
+
+```{r}
+
+par(mfrow = c(1, 3))
+
+r = c(1.95, 2.05, 2.8)
+
+for (rate in r){
+  n0s = rlnorm(NE,log(n0),n0.sd)
+  n = matrix(n0s,NE,NT)
+  for(i in 1:NE){
+    for(t in 2:NT){
+      n[i,t] = max(0,n[i,t-1] + rate*n[i,t-1]*(1-n[i,t-1]/K))
+    }
+  }
+  n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
+  plot(time,n.stats[2,],type='l',ylim=c(0,12),lwd=3,
+       bty='l',cex.lab=1.5,
+       xlab="Time",ylab="Population Size")
+  ciEnvelope(time,n.stats[2,],n.stats[3,])
+}
+```

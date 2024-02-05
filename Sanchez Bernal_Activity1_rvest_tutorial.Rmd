@@ -24,7 +24,7 @@ For this tutorial we also need the package `formattable` and `httr`
 # install.packages("httr")
 ```
 
-Now, import the library:
+Now, import the libraries:
 
 ```{r}
 library(rvest)
@@ -34,7 +34,7 @@ library(httr)
 
 # `rvest` basic tutorial
 
-The next example comes from the rvest website (Obtained from: <https://rvest.tidyverse.org/index.html>). This shows us the basic functionality of the package to read html, retrieve information from specific html elements and attributes and how to convert html to text.
+The next example comes from the rvest website (Obtained from: <https://rvest.tidyverse.org/index.html>). This shows us the basic functionality of the package to read html, retrieve information from specific html elements, and attributes and how to convert html to text.
 
 ```{r}
 
@@ -124,10 +124,9 @@ formattable(table, align = c("l", "r", "r"), list(
 ))
 
 
-
 ```
 
-# Web scrap images
+# Scrap images from a website
 
 The next R script uses the `rvest` and `httr` libraries to scrape and download images from the NOAA website. It first reads the HTML content of the specified URL, then selects and extracts the image URLs contained within `<figure>` and `<a>` tags. After ensuring the target directory for saving images exists, it downloads each image to that directory.
 
@@ -138,7 +137,7 @@ url <- "https://gml.noaa.gov/ccgg/about/co2_measurements.html"
 page <- read_html(url)
 
 # Locate the figure nodes
-figure_nodes <- html_nodes(page, "figure > a")  # Adjust the CSS selector as needed
+figure_nodes <- html_nodes(page, "figure > a")  
 
 # Extract the URLs from href attribute
 image_urls <- html_attr(figure_nodes, "href")
@@ -146,7 +145,7 @@ image_urls <- html_attr(figure_nodes, "href")
 image_urls
 
 # Directory to save images
-save_directory <- "scrap_images"  # Replace with your desired directory
+save_directory <- "scrap_images"  
 
 # Create the directory if it doesn't exist
 if(!dir.exists(save_directory)) {
