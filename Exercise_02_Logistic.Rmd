@@ -35,7 +35,11 @@ plot(time,n,ylim=c(0,12),lwd=3,type='l',
 
 ### Problems
 
+<<<<<<< HEAD
 1.  Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
+=======
+1. [A] Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
+>>>>>>> master
 
 ```{r Problem_1}
 r = c(1.95, 2.05, 2.5, 2.8)
@@ -171,7 +175,11 @@ This example demonstrates that as the number of random draws from a probability 
 
 ### Problems
 
+<<<<<<< HEAD
 2.  Choose another probability distribution from the table above and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
+=======
+2. [A] Choose another probability distribution from the table above and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
+>>>>>>> master
 
 ```{r Problem_2}
 
@@ -254,7 +262,11 @@ It turns out that this specific transformation (x\^2 of a standard Normal), has 
 
 ### Problems
 
+<<<<<<< HEAD
 3.  Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+=======
+3. [B] Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+>>>>>>> master
 
 ```{r}
 
@@ -325,6 +337,7 @@ ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
 
 ### Problems
 
+<<<<<<< HEAD
 4.  Plot histograms of the samples of r and K used for the simulation.
 
 ```{r} 
@@ -343,6 +356,18 @@ plot(time,n[1,],type='l',ylim=c(0,12),lwd=3,
 for(i in 2:10){
   lines(time,n[i,],lwd=3)
 }
+=======
+4. [B] Plot histograms of the samples of r and K used for the simulation.
+
+5. [A] Plot a sample of 10 different trajectories (through time) from your ensemble (on one graph).
+
+6. [B] Plot a histogram of your population forecast at time = 15.
+
+7. [A] Plot the median trajectory through time. Use `ciEnvelope` to add a 95% CI (i.e. 2.5% to 97.5%) to the plot. This function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
+
+Initial conditions
+------------------
+>>>>>>> master
 
 ```
 
@@ -382,6 +407,7 @@ for(i in 1:NE){
 
 ### Problems
 
+<<<<<<< HEAD
 8.  Plot the median & 95% interval.
 
 ```{r}
@@ -391,6 +417,11 @@ plot(time,n.stats[2,],type='l',ylim=c(0,12),lwd=3,
      xlab="Time",ylab="Population Size")
 ciEnvelope(time,n.stats[2,],n.stats[3,])
 ```
+=======
+8. [B] Plot the median & 95% interval.
+
+9. [C] Repeat with r equal to 1.95, 2.05, and 2.8
+>>>>>>> master
 
 9.  Repeat with r equal to 1.95, 2.05, and 2.8
 

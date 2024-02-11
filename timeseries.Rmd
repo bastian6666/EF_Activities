@@ -26,6 +26,10 @@ if(!file.exists("df.Rdata")){
 }
 ```
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
 ## Daymet data
 
 ```{r}
@@ -50,7 +54,10 @@ plot(hm$yday,hm$mean,ylim=c(-15,23),ylab="tmin",xlab="doy",type='l',lwd=3)
 lines(hm$yday,hm$mean-1.96*hm$sd,lty=2); lines(hm$yday,hm$mean+1.96*hm$sd,lty=2)
 points(test$yday,test$tmin..deg.c.,col=2,pch=18,cex=0.5)
 ```
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
 ## Time series data objects
 
 ```{r}
@@ -58,6 +65,7 @@ xt <- ts(train$tmin..deg.c.,start=2003,frequency = 365)  ## convert data to a ti
 plot(xt,type='b',ylab="C",xlab="Year",main="Min temperature",cex=0.5)
 ```
 
+<<<<<<< HEAD
 ## Null 2: random walk
 
 Ar \_\_\> Autoregressive --\> P=0
@@ -69,6 +77,14 @@ I --\> Integrative --\> D = 0 $$x_t <-- [x_t - x_{t-1}] --> \approx \frac{dx}{dt
 ```{r}
 library(forecast)
 rw = Arima(xt,c(0,0,0)) # Autoregressive 
+=======
+
+## Null 2: random walk
+
+```{r}
+library(forecast)
+rw = Arima(xt,c(0,0,0))
+>>>>>>> master
 rw
 ```
 
@@ -92,18 +108,25 @@ text(-5,15,cor(t,tlag))
 
 ## Autocorrelation function
 
+<<<<<<< HEAD
 $$x_{t+1} = \rho x_t$$
 $$x_{t+2} = \rho^2 x_t$$
 $$x_{t+k} = \rho^k x_t$$
 
+=======
+>>>>>>> master
 ```{r}
 acf(train$tmin..deg.c.)
 ```
 
+<<<<<<< HEAD
 
 
 ## Partial Autocorrelation function
 This is better 
+=======
+## Partial Autocorrelation function
+>>>>>>> master
 
 ```{r}
 pacf(train$tmin..deg.c.)
@@ -115,7 +138,10 @@ pacf(train$tmin..deg.c.)
 ar1 = Arima(xt,c(1,0,0))
 ar1
 ```
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
 ## AR(1) forecast
 
 ```{r}
@@ -193,3 +219,7 @@ lines(test$date,arp$upper-arp$lower,col=4)
 lines(test$date,rrp$upper-rrp$lower,col=5)
 legend("bottomright",col=1:5,lwd=2,legend=c("RandWalk","HistMeans","AR(1)","AR(auto)","detrended AR(auto)"))
 ```
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
