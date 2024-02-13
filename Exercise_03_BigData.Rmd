@@ -62,9 +62,7 @@ Note: To open these files in a spreadsheet application, we recommend you save ea
 For more information, please visit http://www.google.org/flutrends
 ```
 
-**Question 1: [A]**
-
-Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
+**Question 1: [A]**Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
 
 ```{r Question_1}
 phenology = readr::read_csv("https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz")
@@ -204,7 +202,7 @@ time = as.Date(names(EVI))
 ```{r Question_3}
 
 plot(time,EVI,type='l')
-points(pheno$datetime, pheno$observation, col='red')
+lines(pheno$datetime, pheno$observation, col='red')
 
 ```
 
@@ -274,22 +272,32 @@ dfc
  Make a timeseries plot of the "air_temperature" data in this forecast that shows one curve for each ensemble member (there are 31 ensemble members total). Hint: make sure to filter all relevant variables before calling `collect`.
 
 ```{r Question_4}
-s3_b <- arrow::s3_bucket(bucket = "neon4cast-drivers/noaa/gefs-v12/stage2/parquet/0/2024-01-01",
+## connect to the S3 bucket
+s3 <- arrow::s3_bucket(bucket = "neon4cast-drivers/noaa/gefs-v12/stage2/parquet/0/2024-01-07",
                         endpoint_override = "data.ecoforecast.org",
                         anonymous=TRUE)
-ds_b <- arrow::open_dataset(s3_b)
-df_b <- ds_b |> 
-  filter(site_id == "HARV") |>
+dsa <- arrow::open_dataset(s3)
+dsa
+df <- dsa |> 
+  filter(site_id == "HARV", 
+          variable == "air_temperature") |>
   collect()
-head(df_b)
+head(df)
+
+
+
+## plot
+dfa = subset(df,parameter == 1)
+plot(dfa$datetime, dfa$prediction, type = 'l')
+
+for (i in 2:31){
+  dfa = subset(df,parameter == i)
+  lines(dfa$datetime, dfa$prediction, col = i)
+}
+
 ```
 
-```{r}
-#Make a timeseries plot of the "air_temperature" data in this forecast that shows one curve for each ensemble member (there are 31 ensemble members total).
-unique(df_b$ensemble_member_id)
 
-plot(df_b$reference_datetime, df_b$prediction, type='l')
-```
 
 
 EML Metadata
@@ -332,9 +340,18 @@ More information about the EFI metadata standard can be found here https://githu
 **Question 5 [A]**
 Based on the metadata above, what were the identities of the species_1 and species_2 columns in the forecast file, what units were used, and did this forecast propagate the initial condition uncertainty for these species? For full credit, include code that answers these questions rather than just looking for the answers in the output.
 
-```{r Question_5}
-get_attributes(dt_md$dataTable$attributeList)
-eml_get(md$additionalMetadata, "forecast")
+```{r Question_5 A}
+
+attributes_table = get_attributes(dt_md$dataTable$attributeList)
+attributes_df <- do.call(rbind, lapply(attributes_table, data.frame))
+att_df_subset = subset(attributes_df, attributeName == c("species_1","species_2"))
+att_df_subset
+
+```
+
+```{r Question_5 B}
+metadata_file = eml_get(md$additionalMetadata, "forecast")
+metadata_file$process_error$status
 ```
 
 cron
@@ -391,11 +408,42 @@ cron_rm("test2")
 ```
 
 
-**Question #6: [A]**
-
-Imagine you are working with MODIS data, but are grabbing a large region (rather than a single pixel) and want to ensure that the data you are using is alwaysd up to date. However, the total size of the database is large and you don't want to completely delete and reinstall the database every day when only a small percentage of the data changes in any update. 
+**Question #6: [A]** Imagine you are working with MODIS data, but are grabbing a large region (rather than a single pixel) and want to ensure that the data you are using is alwaysd up to date. However, the total size of the database is large and you don't want to completely delete and reinstall the database every day when only a small percentage of the data changes in any update. 
 
 * Write out the pseudocode/outline for how to keep the files up to date
+
+### Pseudocode
+
+
+1. Script with a conditional to check if the data is up to date
+
+#### Script pseudocode --> `update_version.R`
+```
+if (file.exists("MODIS_Data")) {
+  load("MODIS_Data")
+  last_date = max(calendar_date)
+  if (last_date < Sys.Date()) {
+    ## Update data from MODIS only for the missing dates
+  }
+} else {
+  ## pass
+  
+}
+```
+
+2. Cron job to run the script daily at 4AM
+```
+date_v <- system.file(package = "cronR", "extdata", "update_version.R")
+cmd <- cron_rscript(date_v)
+cron_add(command = cmd, frequency = 'daily', at='4AM', id = 'date_verifier')
+```
+
+
 * Write out what the cron table would look like to schedule this job (assume the update only needs to be done weekly)
+  
+```
+MAILTO = bastian6@bu.edu
+0 4 * * 0 /bastian/EF_Activities/update_version.R
+```
 
 
