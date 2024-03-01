@@ -374,17 +374,134 @@ summary(SD)
 ### Task 1 
 
 -   Evaluate the MCMC chain for convergence. Include relevant diagnostics and plots. Determine and remove burn-in [A]
+```{r}
+# Evaluate the MCMC chain for convergence
+plot(jags.out)
+gelman.diag(jags.out)
+BGR <- gelman.plot(jags.out)
+burnin = 500               ## determine convergence
+jags.burn <- window(jags.out, start = burnin)  ## remove burn-in
+plot(jags.burn)      ## check diagnostics post burn-in
+
+```
+
+
 -   Report parameter summary table and plot marginal distributions [A]
+
+```{r}
+# Report parameter summary table
+summary(jags.burn)
+
+# Plot marginal distributions
+plot(jags.burn)
+```
+
+
 -   Describe and explain the parameter covariances that you observe in the pairs plot and parameter correlation matrix.[B]
+
+```{r}
+# Plot pairwise parameter correlations
+pairs(out)	## pairs plot to evaluate parameter correlation
+cor(out)    ## correlation matrix among model parameters
+```
+
+In this case we observe that the relationship between S and b[1] is very weak and slightly positive, with a number of 0.01298919, meaning changes in S barely impact b[1]. Similarly, the link between S and b[2] is also very weak but slightly negative, at -0.0155455, indicating a tiny decrease in b[2] when S increases. However, b[1] and b[2] have a strong negative relationship, shown by a number of -0.8903012, meaning when b[1] increases, b[2] decreases significantly, showing they are closely connected.
+
 -   Compare the summary statistics for the Bayesian regression model to those from the classical regression: `summary(lm(y ~ x1))`. This should include a comparison of the means and uncertainties of **all 3 model parameters** [A]
+
+```{r}
+# Classical regression
+summary(lm(y ~ x1))
+```
+The Bayesian and classical regression analyses give very similar results for our model, with Bayesian estimates for the intercept (9.77078) and slope (2.01330) almost exactly the same as those from classical regression (9.76950 for the intercept and 2.01369 for the slope). This shows that both methods agree on how the data's variables relate to each other. The Bayesian analysis goes further by using standard deviations and quantiles, which provide a deeper look into how uncertain these estimates might be. The Bayesian standard deviations for the intercept (0.898352) and slope (0.076365) offer a more detailed view of uncertainty compared to classical regression. The Bayesian parameter `S`, with an average value of 0.06057 and a variation measure of 0.008635, its not in the classical model but provides extra details making the Bayesian analysis more comprehensive.
 
 # Multiple Regression
 
 Using the dataset "data/Ex05.Part2.RData", extend your univariate regression to a multiple regression model with two covariates (x1, x2) and an interaction term (x1\*x2). In doing so, not only do you need to update your process model, but you also need to make sure to update the dimension of your prior and initial conditions on $b$ from 2 to 4.
 
+```{r}
+# Multiple regression data
+load("data/Ex05.Part2.RData")
+plot(x1,y)
+plot(x2,y)
+```
+
+
 ### Task 2
 
 -   Show the JAGS and R code used. [A]
+  
+```{r}
+# JAGS code
+multivariate_regression <- "
+model{
+
+  b ~ dmnorm(b0,Vb)  	## multivariate Normal prior on vector of regression params
+  S ~ dgamma(s1,s2)    ## prior precision
+
+  for(i in 1:n){
+    mu[i] <- b[1] + b[2]*x1[i] + b[3]*x2[i] + b[4]*x1[i]*x2[i]   	## process model
+    y[i]  ~ dnorm(mu[i],S)		        ## data model
+  }
+}
+"
+
+# Load data
+load("data/Ex05.Part2.RData")
+
+# Specify priors
+data <- list(x1 = x1, x2 = x2, y = y, n = length(y))
+data$b0 <- as.vector(c(0,0,0,0))      ## regression b means
+data$Vb <- solve(diag(10000,4))   ## regression b precisions
+data$s1 <- 0.1                    ## error prior n/2
+data$s2 <- 0.1                    ## error prior SS/2
+
+# Initial conditions
+nchain = 3
+inits <- list()
+for(i in 1:nchain){
+  inits[[i]] <- list(b = rnorm(4,0,5), S = runif(1,1/200,1/20))
+}
+
+# Running JAGS
+j.model <- jags.model(file = textConnection(multivariate_regression),
+                      data = data,
+                      inits = inits,
+                      n.chains = 3)
+
+jags.out <- coda.samples(model = j.model,
+                         variable.names = c("b","S"),
+                         n.iter = 5000)
+```
+
+
 -   Include relevant convergence diagnostics and plots. [A]
+
+```{r}
+
+# Evaluate the MCMC chain for convergence
+plot(jags.out)
+gelman.diag(jags.out)
+BGR <- gelman.plot(jags.out)
+burnin = 500               ## determine convergence
+jags.burn <- window(jags.out, start = burnin)  ## remove burn-in
+plot(jags.burn)      ## check diagnostics post burn-in
+
+```
 -   Report parameter summary table. [A]
+
+```{r}
+# Report parameter summary table
+summary(jags.burn)
+```
+
 -   Plot marginal parameter distributions and pairwise parameter correlations (stats and scatter plots). [B]
+
+```{r}
+# Plot marginal parameter distributions
+plot(jags.burn)
+
+# Plot pairwise parameter correlations
+pairs(out)	## pairs plot to evaluate parameter correlation
+cor(out)    ## correlation matrix among model parameters
+```
