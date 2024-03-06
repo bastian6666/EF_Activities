@@ -62,15 +62,9 @@ Note: To open these files in a spreadsheet application, we recommend you save ea
 For more information, please visit http://www.google.org/flutrends
 ```
 
-**Question 1: [A]**Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
+**Question 1: [A]**
 
-```{r Question_1}
-phenology = readr::read_csv("https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz")
-head(phenology)
-pheno = phenology |> filter(site_id == "HARV", variable == "gcc_90")
-plot(pheno$datetime, pheno$observation, type='l')
-
-```
+Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
 
 grep, system, RegExp
 --------------------
