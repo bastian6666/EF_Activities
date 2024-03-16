@@ -326,6 +326,8 @@ ggplot(ci_data, aes(x = Model, ymin = Lower, ymax = Upper, y = (Lower + Upper) /
 
 * Because a state-space model returns X's that are close to the Y's, metrics such as R2 and RMSE aren't great metrics of model performance. Besides looking at the taus, how else could we judge which model is doing better (in a way that avoids/penalizes overfitting)?
 
+I think that we could judge which model is doing better by using the following methods:
+
  - Cross-Validation: Split your data and see if the model still does well on parts it hasn't seen before.
  - Predictive Checks: Check if your model's predictions match up well with what actually happened.
  - Try It on New Data: See if your model also works well on completely new data.
@@ -367,6 +369,8 @@ ecoforecastR::ciEnvelope(time,ci2[1,],ci2[3,],col=ecoforecastR::col.alpha("light
 ```
 
 * Comment on how well the DLM model performed (both accuracy and precision) relative to the random walk and the true observations. How could the model be further improved?
+
+In this case we observe that the DLM model is able to capture the variability of the last points a lot better than the random walk model. I think we can try to improve this model by adding more covariates that could help to explain the variability of the data, anyway, this is not a guranty that the rwsult could be improved. 
 
 # Next steps 
 
