@@ -132,9 +132,51 @@ Question 1 [A]:
 
 To explore the ability of state space models to generate forecasts (or in this case, a hindcast) make a copy of the data and **remove the last 40 observations (convert to NA)** and refit the model.
 
+```{r}
+
+#Copy of the data
+data2 <- data
+# Remove the last 40 observations
+data2$y[(length(data2$y)-39):length(data2$y)] <- NA
+
+data2
+```
+
+```{r}
+# Refit the model
+j.model2   <- jags.model (file = textConnection(RandomWalk),
+                          data = data2,
+                          inits = init,
+                          n.chains = 3)
+
+jags.out2   <- coda.samples (model = j.model2,
+                            variable.names = c("x","tau_add","tau_obs"),
+                            n.iter = 10000)
+```
+
 * Generate a time-series plot for the CI of x that includes all the original observed data (as above but zoom the plot on the last ~80 observations). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
+
+```{r}
+# Time series plot for the CI of x
+time.rng = c(length(time)-80,length(time))       ## adjust to zoom in and out
+out2 <- as.matrix(jags.out2)         ## convert from coda to matrix
+x.cols <- grep("^x",colnames(out2)) ## grab all columns that start with the letter x
+ci2 <- apply(exp(out2[,x.cols]),2,quantile,c(0.025,0.5,0.975)) ## model was fit on log scale
+
+plot(time,ci2[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
+## adjust x-axis label to be monthly if zoomed
+if(diff(time.rng) < 100){ 
+  axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
+}
+ecoforecastR::ciEnvelope(time,ci2[1,],ci2[3,],col=ecoforecastR::col.alpha("lightBlue",0.75))
+points(time,y,pch="+",cex=0.5)
+points(time[is.na(data2$y)],y[is.na(data2$y)],col="red",pch="x",cex=0.5)
+
+```
+
 * Comment on how well the random walk model performed (both accuracy and precision) and how it might be modified to improve both these criteria.
 
+In this case we observe that that the model is not able to capture the variability of the data, and the CI is too wide. This is because the model is too simple to capture the dynamics of the system. We could improve the model by adding a covariate that could help to explain the variability of the data.
 
 Question 2 [C: Extra Credit]
 ----------------------
@@ -212,9 +254,82 @@ Question 3 [A]:
 -----------
 
 * Compare the process and observation error estimates and model CI between this fit and the original random walk model. How much has the residual variance been reduced by?
+
+
+```{r}
+# Extract process and observation error estimates for the random walk model
+rw_tau_add = summary(jags.out)$statistics["tau_add", "Mean"]
+rw_tau_obs = summary(jags.out)$statistics["tau_obs", "Mean"]
+
+# Extract process and observation error estimates for the DLM model
+dlm_tau_add = summary(ef.out$params)$statistics["tau_add", "Mean"]
+dlm_tau_obs = summary(ef.out$params)$statistics["tau_obs", "Mean"]
+````
+
+```{r}
+# Calculate residual variance for the random walk model
+rw_residual_variance = 1 / sqrt(rw_tau_obs)
+
+# Calculate residual variance for the DLM model
+dlm_residual_variance = 1 / sqrt(dlm_tau_obs)
+
+# Calculate the reduction in residual variance
+reduction_in_residual_variance = rw_residual_variance - dlm_residual_variance
+
+# Print the results
+print(paste("Random Walk Model - Process Error Estimate: ", rw_tau_add))
+print(paste("Random Walk Model - Observation Error Estimate: ", rw_tau_obs))
+print(paste("DLM Model - Process Error Estimate: ", dlm_tau_add))
+print(paste("DLM Model - Observation Error Estimate: ", dlm_tau_obs))
+print(paste("Reduction in Residual Variance: ", reduction_in_residual_variance))
+
+```
+
+```{r}
+# Extract 95% CI for the random walk model
+rw_ci_lower = summary(jags.out)$quantiles["tau_obs", "2.5%"]
+rw_ci_upper = summary(jags.out)$quantiles["tau_obs", "97.5%"]
+
+# Extract 95% CI for the DLM model
+dlm_ci_lower = summary(ef.out$params)$quantiles["tau_obs", "2.5%"]
+dlm_ci_upper = summary(ef.out$params)$quantiles["tau_obs", "97.5%"]
+
+# Print the results
+print(paste("Random Walk Model - 95% CI: (", rw_ci_lower, ", ", rw_ci_upper, ")"))
+print(paste("DLM Model - 95% CI: (", dlm_ci_lower, ", ", dlm_ci_upper, ")"))
+```
+
+```{r}
+
+# Create a data frame with the CI data
+ci_data <- data.frame(
+  Model = c("Random Walk", "DLM"),
+  Lower = c(rw_ci_lower, dlm_ci_lower),
+  Upper = c(rw_ci_upper, dlm_ci_upper)
+)
+
+# Create a plot
+library(ggplot2)
+ggplot(ci_data, aes(x = Model, ymin = Lower, ymax = Upper, y = (Lower + Upper) / 2)) +
+  geom_errorbar(width = 0.2) +
+  geom_point() +
+  ylab("tau_obs") +
+  ggtitle("95% Confidence Intervals for tau_obs")
+
+```
+
+
+
 * Explain and discuss the parameter estimates (betas) from the dynamic linear model (what do they mean both biologically and in terms of the predictability of the system) and their correlations
+
+  - The summary of the dynamic linear model (DLM) tells us how different factors, like baseline conditions (betaIntercept), minimum temperature (betaTmin), and another factor (betaX), affect what we're studying. The baseline condition shows what happens when other factors are not at play. The temperature part indicates that as the temperature goes up, the thing we're looking at tends to go down a bit, suggesting that cooler temperatures might be better up to a point. The other factor also leads to decreases, implying it's important to consider for predicting outcomes. The model helps us understand how these factors work together and their impact, which is crucial for making accurate predictions, especially in situations where things change over time.
+
 * Because a state-space model returns X's that are close to the Y's, metrics such as R2 and RMSE aren't great metrics of model performance. Besides looking at the taus, how else could we judge which model is doing better (in a way that avoids/penalizes overfitting)?
 
+ - Cross-Validation: Split your data and see if the model still does well on parts it hasn't seen before.
+ - Predictive Checks: Check if your model's predictions match up well with what actually happened.
+ - Try It on New Data: See if your model also works well on completely new data.
+ - Sensitivity Checks: Change small things in your model to see if the predictions still hold up.
 
 Question 4 [B]:
 -----------
@@ -222,6 +337,35 @@ Question 4 [B]:
 Repeat the process of forecasting the last 40 observations (convert to NA), this time using the DLM with temperature as a covariate
 
 * Generate a time-series plot for the CI that includes the observations and both the random walk and DLM models (Hint, think about the order you plot in so you can see both models, also consider including transpancy [alpha] in the CI color)
+
+```{r}
+# Copy of the data
+data3 <- data
+# Remove the last 40 observations
+data3$y[(length(data3$y)-39):length(data3$y)] <- NA
+
+# Time range change for the last 80 observations
+time.rng = c(length(time)-80,length(time))       ## adjust to zoom in and out
+
+# Refit the model
+ef.out2 <- ecoforecastR::fit_dlm(model=list(obs="y",fixed="~ 1 + X + Tmin"),data3)
+
+# Extract the CI for the DLM model
+out2 <- as.matrix(ef.out2$predict)
+ci2 <- apply(exp(out2),2,quantile,c(0.025,0.5,0.975))
+
+# Create a time-series plot for the CI that includes the observations and both the random walk and DLM models
+plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
+## adjust x-axis label to be monthly if zoomed
+if(diff(time.rng) < 100){ 
+  axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
+}
+ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col=ecoforecastR::col.alpha("lightBlue",0.75))
+points(time,y,pch="+",cex=0.5)
+ecoforecastR::ciEnvelope(time,ci2[1,],ci2[3,],col=ecoforecastR::col.alpha("lightRed",0.75))
+
+```
+
 * Comment on how well the DLM model performed (both accuracy and precision) relative to the random walk and the true observations. How could the model be further improved?
 
 # Next steps 
