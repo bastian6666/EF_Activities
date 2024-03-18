@@ -182,11 +182,96 @@ Question 2 [C: Extra Credit]
 ----------------------
 To look at how observation frequency affects data assimilation, convert 3 out of every 4 observations to NA (i.e. treat the data as approximately monthly) and refit the model. 
 
+```{r}
+# Convert 3 out of every 4 observations to NA
+data4 <- data
+# Create a sequence of indices from 1 to the length of data4$y
+indices <- seq(1, length(data4$y))
+
+# Identify the first three out of every four observations
+na_indices <- indices[indices %% 4 != 0]
+
+# Set these observations to NA
+data4$y[na_indices] <- NA
+
+# Refit the model
+j.model4   <- jags.model (file = textConnection(RandomWalk),
+                          data = data4,
+                          inits = init,
+                          n.chains = 3)
+
+jags.out4   <- coda.samples (model = j.model4,
+                            variable.names = c("x","tau_add","tau_obs"),
+                            n.iter = 10000)
+
+```
+
 * Generate a time-series plot for the CI of x that includes the observations (as above). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
+
+```{r}
+par(mfrow=c(1,1))
+# Time series plot for the CI of x
+time.rng = c(1,length(time))       ## adjust to zoom in and out
+out4 <- as.matrix(jags.out4)         ## convert from coda to matrix
+x.cols <- grep("^x",colnames(out4)) ## grab all columns that start with the letter x
+ci4 <- apply(exp(out4[,x.cols]),2,quantile,c(0.025,0.5,0.975)) ## model was fit on log scale
+
+plot(time,ci4[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
+## adjust x-axis label to be monthly if zoomed
+if(diff(time.rng) < 100){ 
+  axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
+}
+ecoforecastR::ciEnvelope(time,ci4[1,],ci4[3,],col=ecoforecastR::col.alpha("lightBlue",0.75))
+points(time,y,pch="+",cex=0.5)
+points(time[is.na(data4$y)],y[is.na(data4$y)],col="red",pch="x",cex=0.5)
+
+```
+
 * Compare the CI between the two runs.
+
+```{r}
+# Time of out next to out4
+par(mfrow=c(1,2))
+plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
+## adjust x-axis label to be monthly if zoomed
+if(diff(time.rng) < 100){ 
+  axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
+}
+ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col=ecoforecastR::col.alpha("lightBlue",0.75))
+points(time,y,pch="+",cex=0.5)
+points(time[is.na(data$y)],y[is.na(data$y)],col="red",pch="x",cex=0.5)
+
+plot(time,ci4[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
+## adjust x-axis label to be monthly if zoomed
+if(diff(time.rng) < 100){ 
+  axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
+}
+
+ecoforecastR::ciEnvelope(time,ci4[1,],ci4[3,],col=ecoforecastR::col.alpha("lightBlue",0.75))
+points(time,y,pch="+",cex=0.5)
+points(time[is.na(data4$y)],y[is.na(data4$y)],col="red",pch="x",cex=0.5)
+
+
+
+```
+
+
 * Generate a predicted (median) vs observed plot for the data points that were removed
+
+```{r}
+# Predicted vs observed plot for the data points that were removed
+plot(y[is.na(data4$y)],exp(ci[2,][is.na(data4$y)]),xlab="Observed",ylab="Predicted",log="xy")
+abline(0,1)
+```
+
+
 * Comment on the accuracy and precision of the state estimates.
+
+We can observe that converting 3 out of every 4 observations to NA have a negative impact on the accuracy and precision of the state estimates. In some regions we observe higher and lower peaks in the confidence intervals of the predictions.
+
 * How does the reduction in data volume affect the parameter estimates (taus)
+
+The reduction in data volume affects the parameter estimates (taus) by increasing the uncertainty in the estimates. This is because the model has less data to learn from, so it is less certain about the estimates.
 
 # Dynamic Linear Models
 
@@ -308,21 +393,13 @@ ci_data <- data.frame(
   Upper = c(rw_ci_upper, dlm_ci_upper)
 )
 
-# Create a plot
-library(ggplot2)
-ggplot(ci_data, aes(x = Model, ymin = Lower, ymax = Upper, y = (Lower + Upper) / 2)) +
-  geom_errorbar(width = 0.2) +
-  geom_point() +
-  ylab("tau_obs") +
-  ggtitle("95% Confidence Intervals for tau_obs")
-
 ```
 
 
 
 * Explain and discuss the parameter estimates (betas) from the dynamic linear model (what do they mean both biologically and in terms of the predictability of the system) and their correlations
 
-  - The summary of the dynamic linear model (DLM) tells us how different factors, like baseline conditions (betaIntercept), minimum temperature (betaTmin), and another factor (betaX), affect what we're studying. The baseline condition shows what happens when other factors are not at play. The temperature part indicates that as the temperature goes up, the thing we're looking at tends to go down a bit, suggesting that cooler temperatures might be better up to a point. The other factor also leads to decreases, implying it's important to consider for predicting outcomes. The model helps us understand how these factors work together and their impact, which is crucial for making accurate predictions, especially in situations where things change over time.
+  - The summary of the dynamic linear model (DLM) tells us how different factors, like baseline conditions (betaIntercept), minimum temperature (betaTmin), and another factor (betaX), affect the predictions. The temperature part indicates that as the temperature goes up, the predicted values tend to go down a bit, suggesting that cooler temperatures might be better up to a point. The other factor also leads to decreases, so it's important to consider for predicting outcomes. The model helps us understand how these factors work together and their impact.
 
 * Because a state-space model returns X's that are close to the Y's, metrics such as R2 and RMSE aren't great metrics of model performance. Besides looking at the taus, how else could we judge which model is doing better (in a way that avoids/penalizes overfitting)?
 
@@ -364,7 +441,7 @@ if(diff(time.rng) < 100){
 }
 ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col=ecoforecastR::col.alpha("lightBlue",0.75))
 points(time,y,pch="+",cex=0.5)
-ecoforecastR::ciEnvelope(time,ci2[1,],ci2[3,],col=ecoforecastR::col.alpha("lightRed",0.75))
+ecoforecastR::ciEnvelope(time,ci2[1,],ci2[3,],col=ecoforecastR::col.alpha("pink",0.75))
 
 ```
 
