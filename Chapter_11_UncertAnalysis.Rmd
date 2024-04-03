@@ -187,6 +187,7 @@ param.mean <- apply(params,2,mean)
 ## initial conditions
 IC <- as.matrix(out$predict)
 
+
 N.det <- forecastN(IC=mean(IC[,"N[6,30]"]),
                    ppt=ppt.mean,
                    r=param.mean["r_global"],
@@ -228,6 +229,8 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 
 **Question 1: [A]** Describe the pattern to the initial condition uncertainty and compare that to your expectations (e.g. Table 1).
 
+  - In this case we observe that the initial conditions have a relatively small impact on the forecast, and we only appreciate the change in the first few time steps. This is consistent with the expectation that the initial conditions are only important in the short term, and that the model dynamics quickly dominate the forecast.
+
 ### Parameter uncertainty
 
 Next, let's add parameter uncertainty to our forecast. To do this we'll want to sample the **joint** parameter posterior distribution using the row numbers as before. In this forecast we're still running `r Nmc` model runs, but now each run get's its own unique parameters _and_ its own unique initial conditions. We expect the total uncertainty to increase, so we can layer the run with both uncertainties on top of the run with just initial conditions to get a feel for how much more uncertainty is added when we incorporate parameter uncertainty.
@@ -254,7 +257,13 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 
 **Question 2: [A]** 
 A) Describe the pattern and relative magnitude of the parameter uncertainty and compare this to your expectations. 
+
+  - In this case we observe that the parameter uncertainty has a larger impact on the forecast than the initial conditions. The pattern of the red envelope follows the general trend of the blue line, but it shows more extreme values (both higher and lower) at any given time point. This reflects the variability and unpredictability introduced by the differing parameter values used in each of the 1000 model runs.
+
 B) Using the existing model and Monte Carlo approach, describe how you might partition the contribution of each parameter (r, Kg, alpha, beta) to the forecast uncertainty.
+
+  - In order to partition the contribution of each parameter I would consider to implement a type of sensitivity analysis.  This involves generating numerous samples across the joint parameter space and running the model for each set, then perform an uncertainty analysis to observe the influence of each parameter in the forecast. This would allow me to see how the forecast changes as I change the value of each parameter.
+
 
 ### Driver uncertainty
 
@@ -295,6 +304,8 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 
 **Question 3: [A]** As before, describe the pattern of how driver uncertainty contributes to the forecast and compare that to our first principles expectations.
 
+  - We can observe that the driver uncertainty has a large impact on the forecast, and that the uncertainty grows with time. We can conclude this since the pattern of the confidence intervals in the green envelope increase in width as we move from left to right in the plot. This is consistent with the expectation that the uncertainty in the drivers will propagate into the forecast, and that the uncertainty will grow with time.
+
 ### Process uncertainty
 
 Adding process error to the model looks similar to both older _stochastic_ modeling approachs and to the _residual_ error in statistical models. However, it is subtly distinct in a few important ways. First, unlike theoretical stochastic models, process error is estimated explicitly by fitting models to data. Second, unlike residual error, when we estimate process error we partition it from the observation error. Thus the process error represents things in the process that the model is unable to capture (which will always occur because all models are approximations). The distinction between process and observation error is important because observation error only affects the current observation, but process error propagates into the future.
@@ -324,13 +335,22 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 
 **Question 4: [A]** Why might the relative contribution of the process error decline with time? Does this match expectations?
 
+  - Adding process error to the model increases the uncertainty in the forecast. I think that the impact of the process error on the forecast tends to decrease beacause the effects of initial inaccuracies or unaccounted factors in the model become less significant as the forecast moves further from the initial conditions. 
+
 ### Random Effect uncertainty
 
 The last figure above represent our best forecast if we're making an **in-sample** prediction (i.e. forecasting one of the sites that we have previously studied). However, if we are making an **out-of-sample** prediction to a new site then there is an additional source of uncertainty that needs to be considered -- the unexplained site-to-site variability being captured by the random effect. When we're making an in-sample prediction we use the posterior $\alpha$ associated with that specific site, but for a new site we need to move up a level in the hierarchical model and sample new alpha values using the across-site precision, $\tau_{site}$. While the out-of-sample forecast is going to have greater uncertainty (which makes intuitive sense and is a desirable feature), there's no guarantee that the in-sample prediction is within the predictive interval of the out-of-sample prediction because the focal site might have been above- or below-average relative to the across-site mean.
 
 ```{r}
 ## Random effect samples
-tau.mc <- 1/sqrt(params[prow,"tau_site"]) ## convert from precision to std deviation
+
+tau.mc = param.mean["tau_site"]  ## use posterior mean
+
+
+#tau.mc <- 1/sqrt(params[prow,"tau_site"]) ## convert from precision to std deviation
+
+tau.mc <- 1/sqrt(tau.mc) 
+
 aNew.mc <- rnorm(Nmc,0,tau.mc)            ## draw out-of-sample predictions of alpha at a new site
 
 N.IPDEA <- forecastN(IC=IC[prow,"N[6,30]"],    ## sample IC
@@ -354,6 +374,15 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 ```
 
 **Question 5: [B]** The last step added random effects, but this uncertainty could be further partitioned into two parts: the ecological site-to-site variability in the population processes, and the parameter uncertainty about the site-to-site variance. To partition these out repeat the random effect partitioning analysis setting `tau.mc` to its posterior mean. How does this change your results? How much of the random effect uncertainty is due to ecological variability versus uncertainty about `tau.mc`?
+
+  - If we set tau.mc to its posterior mean, we can eliminate the variability in the forecast that comes from our uncertainty about tau_site. This will allow us to see how much of the random effect uncertainty is due to ecological variability. 
+
+  ```
+    tau.mc = param.mean["tau_site"] 
+    tau.mc <- 1/sqrt(tau.mc) 
+  ```
+
+  - When we change this to the posterior mean with the code above, we can see that the uncertainty in the forecast is reduced a little bit. This means that the uncertainty in the forecast that comes from tau_site is relatively small. This is consistent with the expectation that the ecological variability is the main source of uncertainty in the forecast.
 
 # Uncertainty Analysis
 
@@ -390,6 +419,8 @@ legend("topleft",legend=c("Process","Driver","Parameter","InitCond"),col=rev(N.c
 
 
 **Question 6: [A]**  Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about improving in-sample predictions? What is the current balance between process and parameter error and what does that tell us about the potential value of increasing model complexity?
+
+  - Based on this results and on the last chart I would base my research efforts on improving the Random efects and the Process error. This is because the Random effects and the Process error are the two biggest sources of uncertainty in the forecast. Anyway, I would consider also work on Driver uncertainty, since it is the third biggest source of uncertainty. If I'm going to work on a short term prediction I would also consider working on the Initial Conditions. Analyzing the balance between process and parameter error, we can see that the process error is significantly bigger than the parameter error. This tells us that increasing the model complexity could be a good idea, since the process error is the biggest source of uncertainty in the forecast.
 
 ## Next steps [C: extra credit for 1 of the 3 options below]:
 
