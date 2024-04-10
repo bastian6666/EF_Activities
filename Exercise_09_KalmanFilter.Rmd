@@ -193,13 +193,13 @@ With the Kalman Filter function defined, we need to define the inputs to the fun
 Y   = log10(y)
 
 ## options for process model 
-alpha = 0        ## assume no spatial flux
-#alpha = 0.05    ## assume a large spatial flux
+# alpha = 0        ## assume no spatial flux
+alpha = 0.05    ## assume a large spatial flux
 M = adj*alpha + diag(1-alpha*apply(adj,1,sum))  ## random walk with flux
 
 ## options for process error covariance
-#Q = tau_proc            ## full process error covariance matrix
-Q = diag(diag(tau_proc))        ## diagonal process error matrix
+Q = tau_proc            ## full process error covariance matrix
+# Q = diag(diag(tau_proc))        ## diagonal process error matrix
 
 ## observation error covariance (assumed independent)  
 R = diag(tau_obs,nstates) 
@@ -273,11 +273,34 @@ Run the KF under all four combinations of covariance in the process model versus
 
 Task 1, KF00 [A]: Run the default analysis, KF00, with no spatial flux in the process model, and no spatial covariance in the process error
 
+```
+# Notes
+Alpha = 0 (no spatial flux)
+Q = diag(diag(tau_proc)) (no spatial covariance in process error)
+```
+
+
 Task 2, KF01 [A]: Rerun with process error set to the full covariance matrix of Q, compare the results with the original -- what impact does including covariance in the process error have on the inference?
+
+```
+# Notes
+Q = tau_proc (full spatial covariance in process error)
+```
+
+  - In this case, the process error covariance matrix is the full matrix, which means that the process error is correlated across states. This means that the process error in one state is correlated with the process error in another state. This is in contrast to the previous case where the process error was assumed to be independent across states. Observing the first set of plots (posterior analysis) in the visualizing outputs section we notice that the states with missing data show larger variations in the mean of the analysis. 
 
 Task 3, KF10 [B]: Rerun with alpha = 0.05 but switch back to the *diagonal* Q matrix (no spatial covariance). Comparing KF10 to KF00, what impact does including a spatial flux in the process model have on the inference?
 
+```
+# Notes
+alpha = 0.05   ## assume a large spatial flux
+```
+
+  - In this case we remove the spatial covariance from the error process. So the models is capturing the spatial dynamics from the process model. When we comapre the results with the previous run (KF00), we notice that the states with missing data show less uncertainty according to the confidence intervals in the mean of the analysis. Also we observe that the state estimates are more sensitive to changes in the adjacent states. Also the standard deviations of the forecast is smaller in in the states with missing data comparing them with the case of KF00, where the maximum standard deviation value was 0.8. In this case the maximum standard deviation value is 0.3 for Vermont and Maine.
+
 Task 4, KF11 [A]: Rerun with alpha = 0.05 and the full process error covariance Q matrix. Compare KF11 to the previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
+
+  - In this case we are assuming a large spatial flux and a full process error covariance matrix. With this we are trying to capture the direct influence that the states have on each other through the spatial flux and the correlations in the process errors across states. We notice the reduction in the values of the standard deviation of the forecast. In general the model exhibit improved accuracy in state estimates and forecasts
 
 Task 5 [A]: In a true forecasting situation you don't have all the data in hand at once. You also often want to make a forecast that is farther than one time-step into the future. **Write an R function you could run daily** that would:
 
@@ -285,8 +308,79 @@ Task 5 [A]: In a true forecasting situation you don't have all the data in hand 
 * Assimilates the new data
 * Makes a forecast 16 time steps into the future
 * Returns a list that starts from (& includes) the current best estimate (i.e. nowcast) and the forecast for the next 16 time steps. This list should include both means (mu) and covariances (P), but shouldn't need to include separate mu.a/mu.f and P.a/P.f objects.
-
 You should leverage the existing `KalmanAnalysis` and `KalmanForecast` functions in your new function, and you shouldn't need to change anything in or about those functions.
+
+```{r}
+
+dailyKalmanUpdateExtended <- function(M, mu0, P0, Q, R, Y) {
+  # Setup
+  nstates = nrow(Y)
+  nt = ncol(Y)  
+  nt_future = nt + 16  
+  mu.f = matrix(NA, nstates, nt_future + 1)
+  mu.a = matrix(NA, nstates, nt)
+  P.f = array(NA, c(nstates, nstates, nt_future + 1))
+  P.a = array(NA, c(nstates, nstates, nt))
+  I = diag(1, nstates) 
+
+
+  mu.f[, 1] = mu0
+  P.f[, , 1] = P0
+
+
+  for (t in 1:nt) {
+    # Analysis step
+    KA <- KalmanAnalysis(mu.f[, t], P.f[, , t], Y[, t], R, I, I)  
+    mu.a[, t] <- KA$mu.a
+    P.a[, , t] <- KA$P.a
+    
+    # Forecast step
+    KF <- KalmanForecast(mu.a[, t], P.a[, , t], M, Q)
+    mu.f[, t+1] <- KF$mu.f
+    P.f[, , t+1] <- KF$P.f
+  }
+  
+
+  for (t in (nt+1):nt_future) {
+    KF <- KalmanForecast(mu.f[, t], P.f[, , t], M, Q)
+    mu.f[, t+1] <- KF$mu.f
+    P.f[, , t+1] <- KF$P.f
+  }
+  
+
+  mu_output = mu.f[, 1:(nt+16)]
+  P_output = P.f[, , 1:(nt+16)]
+
+  return(list(mu = mu_output, P = P_output))
+}
+
+
+KalmanDaily = dailyKalmanUpdateExtended(M, mu0, P0, Q, R, Y[, 1:6])
+
+
+#KalmanDaily
+
+
+```
+
+
+```{r}
+
+mu <- KalmanDaily$mu  
+P <- KalmanDaily$P   
+
+sd <- sqrt(diag(P[,,1])) 
+
+ci <- rbind(mu[1,] - 1.96 * sd, mu[1,] + 1.96 * sd)
+
+time_steps <- 1:length(mu[1,])
+
+# Plotting
+plot(time_steps, mu[1,], type='n', ylim=range(ci), xlab="Time Step", ylab="Forecast Value", main="Forecast with Confidence Intervals for State 1")
+ecoforecastR::ciEnvelope(time_steps, ci[1,], ci[2,], col="lightblue")
+lines(time_steps, mu[1,], lwd=2)
+
+```
 
 Note: in a real world situation, where your forecast model has driver/covariate data, you would actually want to first re-run the forecast from yesterday to today with the actual (now observed) driver/covariate data, rather than using your archived forecast (which was done based on your forecasted covariate/driver data), before assimilating today's new observations of your response data.
 
