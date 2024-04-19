@@ -120,6 +120,7 @@ KalmanFilter <- function(M,mu0,P0,Q,R,Y){
   ## storage
   nstates = nrow(Y)  
   nt = ncol(Y)
+  print(nt)
   mu.f  = matrix(NA,nstates,nt+1)  ## forecast mean for time t
   mu.a  = matrix(NA,nstates,nt)  ## analysis mean for time t
   P.f  = array(NA,c(nstates,nstates,nt+1))  ## forecast variance for time t
@@ -143,7 +144,7 @@ KalmanFilter <- function(M,mu0,P0,Q,R,Y){
     mu.f[,t+1] <- KF$mu.f
     P.f[,,t+1] <- KF$P.f
   }
-  
+  print(dim(P.f))
   return(list(mu.f=mu.f,mu.a=mu.a,P.f=P.f,P.a=P.a))
 }
 
@@ -156,7 +157,8 @@ KalmanFilter <- function(M,mu0,P0,Q,R,Y){
 KalmanAnalysis <- function(mu.f,P.f,Y,R,H,I){
   obs = !is.na(Y) ## which Y's were observed?
   if(any(obs)){
-    H <- H[obs,]                                              ## observation matrix
+    H <- H[obs,]    
+    print(dim(H))                                           ## observation matrix
     K <- P.f %*% t(H) %*% solve(H%*%P.f%*%t(H) + R[obs,obs])  ## Kalman gain
     mu.a <- mu.f + K%*%(Y[obs] - H %*% mu.f)                  ## update mean
     P.a <- (I - K %*% H)%*%P.f                                ## update covariance
@@ -204,6 +206,7 @@ Q = tau_proc            ## full process error covariance matrix
 ## observation error covariance (assumed independent)  
 R = diag(tau_obs,nstates) 
 
+print(dim(R))
 ## prior on first step, initialize with long-term mean and covariance
 mu0 = apply(Y,1,mean,na.rm=TRUE)
 P0 = cov(t(Y),use="pairwise.complete.obs")

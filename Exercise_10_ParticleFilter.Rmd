@@ -126,7 +126,7 @@ There are a few assumptions in developing the initial conditions
 
 ```{r}
 #### SET THE ENSEMBLE SIZE
-ne = 1000 ## production run should be 200 - 5000, depending on what your computer can handle
+ne = 500 ## production run should be 200 - 5000, depending on what your computer can handle
 
 ### Initial State (Mg/ha)
 ### These specific data points were extracted from the Ameriflux BADM files
@@ -297,6 +297,7 @@ step. After this we'll generate some basic diagnostic plots for the model.
 ```{r}
 X = X.orig                             ## initial condition
 nt = nrow(inputs)#17 * 48                           ## 17 days of 30min; production run should be nrow(inputs) *********
+print(nt)
 output = array(0.0, c(nt, ne, 12))     ## output storage [time step,ensembles,variables]
 
 ## foreward ensemble simulation
@@ -606,18 +607,31 @@ for(i in 1:length(params)){      ## loop over parameters
 
 **Question 1**: Increase the number of particles to 500.  How does this change your results?
 
+  - In this case I ran the code first with 50 particles and then with 1000 particles. Specifically, with 1000 particles, the time series visualizations of Leaf Biomass (Bleaf), Structural Biomass (Bwood), Soil Organic Matter (BSOM), Leaf Area Index (LAI), litterfall, and mortality exhibit smoother curves and narrower confidence intervals. This enhancement indicates more stable and precise estimations over time, reflecting a reduction in the variability and uncertainty inherent in the model predictions for these variables. However, for other fluxes and state variables such as Gross Primary Productivity (GPP), Net Ecosystem Exchange (NEP), Autotrophic Respiration (Ra), Net Primary Productivity of wood (NPPw), and leaves (NPPl), and Heterotrophic Respiration (Rh), no significant changes were detected. This suggests that these variables might be less sensitive to particle count. In the case of the non resampling particle filter, the results show that the 1000 particles iteration has better estimation results than the 50 particles iteration. We also observe this behavior in the resampling particle filter. The distribution of the Final Ensmable Weights present a lot of differences between the models
+
 **Question 2**: After 17-days, how different are the simulations with and without particle resampling?
 
-**Question 3**: With the particles at 500, increase the length of the simulation from 17 days
-to 365 days.  Do the results match your expectations?
+  - In general, after 17 days, the simulations with and without particle resampling are very similar. Observing the confidence intervals we see that the non resampling particle filter have smaller regions of uncertainty, but the resampling particle filter has smoother confidence intervals, which implies that resampling helps maintain a consistent ensemble by potentially eliminating outlier particles that could cause abrupt changes. With only 17 days of simulation is difficult to find significant differences between the two methods.
+
+**Question 3**: With the particles at 500, increase the length of the simulation from 17 days to 365 days.  Do the results match your expectations?
+
+  - The results match my expectations. We can clearly observe that the ensamble uncertainty increases due to the variations of the data since the ecosystem experiences a wider range of environmental conditions due to seasonal changes. Anyway, the non resampling particle filter is a litle bit better describing the data with higher variations. 
 
 **Question 4**: After 365-days, how different are the simulations with and without particle resampling?
 
-**Question 5**: How well are the three simulations able to constrain the other fluxes and 
-state variables that are output by the model (which should be updated in 
-proportion to how much they covary with LAI)? 
+  - After 365 days, the simulations with and without particle resampling are very similar. Anyway, if we observe the confidence intervals we can see that the non resampling particle filter has better capacity to describe the data with higher variations. This make sense, since the resampling particle filter removes poor-performing particles. This means that the resampling tends to focus the ensemble on the most likely state trajectories, potentially increasing the accuracy of the ensemble, but loosing the natural variability of the system.
+
+**Question 5**: How well are the three simulations able to constrain the other fluxes and state variables that are output by the model (which should be updated in proportion to how much they covary with LAI)? 
+
+  - Basic Ensemble Forecast: The basic ensamble provides a baseline by projecting the state and fluxes based on the model alone. It has the widest spread of outcomes but is making a good job capturing the range. 
+
+  - Non-resampling Particle Filter: This method adjusts the weight of each particle based on the fit to observed LAI data but keeps all particles. It improves the ensemble mean accuracy but retain some error in the trajectories and more variation in the confidence intervals. This could affect how well it constrains state variables that are strongly correlated with LAI.
+
+  - Resampling Particle Filter: By resampling based on weights from the fit to LAI, this method improved the model outputs with observed data. It offers the best constraint on the related state variables. However, this is reducing ensemble diversity, which might limit the model's ability to explore possible future states like we observe in the simulations.
 
 **Question 6**: Which parameters were most constrained by LAI? Does this make sense?
+
+  - Based on the observations, the Specific Leaf Area (SLA), alpha, and the basal rate of soil respiration (R_basal) appear to be the parameters most constrained by LAI. This correlation is logical given their roles in ecosystem processes. The SLA, which is the ratio of leaf area to leaf dry mass, directly influences LAI calculations. The alpha parameter, representing light use efficiency, is crucial for converting absorbed light into biomass, which is directly linked to LAI through its impact on photosynthetic capacity. However, the connection between R_basal and LAI is more indirect.
 
 ## Extra Credit
 
